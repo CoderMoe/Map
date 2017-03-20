@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#define POINTNUM 5
+#define POINTNUM 6
 struct MYPOINT
 {
 	double longitude;
