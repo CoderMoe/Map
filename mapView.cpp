@@ -35,16 +35,18 @@ END_MESSAGE_MAP()
 CmapView::CmapView()
 {
 	// TODO: add construction code here
-	mypoint[0].longitude = 116.380825;//116.380825,39.902988
-	mypoint[0].latitude = 39.902988;
-	mypoint[1].longitude = 116.380789;//116.380789,39.887211
-	mypoint[1].latitude = 39.887211;
-	mypoint[2].longitude = 116.36771;//116.36771,39.886934
-	mypoint[2].latitude = 39.886934;
-	mypoint[3].longitude = 116.360164;//116.360164,39.879847
-	mypoint[3].latitude = 39.879847;
-	mypoint[4].longitude = 116.3708;//116.3708,39.875307
-	mypoint[4].latitude = 39.875307;
+	mypoint[0].longitude = 116.404682;//116.404682,39.919798
+	mypoint[0].latitude = 39.919798;
+	mypoint[1].longitude = 116.408491;//116.408491,39.920019
+	mypoint[1].latitude = 39.920019;
+	mypoint[2].longitude = 116.407916;//116.407916,39.929315
+	mypoint[2].latitude = 39.929315;
+	mypoint[3].longitude = 116.398286;//116.398286,39.929039
+	mypoint[3].latitude = 39.929039;
+	mypoint[4].longitude = 116.398717;//116.398717,39.919577
+	mypoint[4].latitude = 39.919577;
+	mypoint[5].longitude = 116.402239; //116.402239,39.919743
+	mypoint[5].latitude = 39.919743;
 }
 
 CmapView::~CmapView()
@@ -82,36 +84,41 @@ void CmapView::OnDraw(CDC* pDC)
 	CPoint * p = new CPoint();
 	for (int i = 0; i < POINTNUM; i++)
 	{
-		extern void minLonmaxLat(MYPOINT * point, int NUM, double minLongitude, double maxLatitude);
+		extern void minLonmaxLat(MYPOINT * point, int NUM, double  *minLongitude, double *maxLatitude);
 		extern double distanceLongLat(double longitudeA, double longitudeB, double latitudeA, double latitudeB);
 		double minLongitude = mypoint[0].longitude;
 		double maxLatitude = mypoint[0].latitude;
-		minLonmaxLat(mypoint, POINTNUM, minLongitude, maxLatitude);
+		minLonmaxLat(mypoint, POINTNUM, &minLongitude, &maxLatitude);
 		
-		p->x = (int)(distanceLongLat(minLongitude, mypoint[i].longitude, maxLatitude, maxLatitude) / ratio / 2)+550;
-		p->y = (int)(distanceLongLat(minLongitude, minLongitude, maxLatitude, mypoint[i].latitude) / ratio / 2)+50;
+		p->x = (int)(distanceLongLat(minLongitude, mypoint[i].longitude, maxLatitude, maxLatitude) / ratio / 10) + 300;
+		p->y = (int)(distanceLongLat(minLongitude, minLongitude, maxLatitude, mypoint[i].latitude) / ratio / 10) + 50;
 		
 		mp.push_back(*p);
 	}
 
 	
-	pDC->MoveTo(mp[0]);
+	//pDC->MoveTo(mp[0]);
+	POINT *pt = new POINT[POINTNUM];
+	CPen pen;
+	pen.CreatePen(PS_SOLID, 5, RGB(0, 0, 0));
+	CPen* oldPen = pDC->SelectObject(&pen);
 	for (int i = 0; i < POINTNUM; i++)
 	{
-		CPen pen;
-		pen.CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
-		CPen* oldPen = pDC->SelectObject(&pen);
+		
 		CString str;
 		str.Format(_T("%d"), i);
 		
 		pDC->TextOutW(mp[i].x, mp[i].y, str);
 		
-		pDC->LineTo(mp[i]);
-		pDC->SelectObject(oldPen);
+		//pDC->LineTo(mp[i]);
 		
-		
+		pt[i].x = mp[i].x;
+		pt[i].y = mp[i].y;	
 	}
+	pDC->Polyline(pt, 6);
+	pDC->SelectObject(oldPen);
 	delete p;
+	delete pt;
 }
 
 
