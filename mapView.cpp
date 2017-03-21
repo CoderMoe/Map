@@ -28,6 +28,10 @@ BEGIN_MESSAGE_MAP(CmapView, CView)
 	ON_COMMAND(ID_FILE_PRINT, &CView::OnFilePrint)
 	ON_COMMAND(ID_FILE_PRINT_DIRECT, &CView::OnFilePrint)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CView::OnFilePrintPreview)
+	ON_WM_LBUTTONDOWN()
+	ON_WM_LBUTTONUP()
+	ON_WM_MOUSEMOVE()
+	ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 // CmapView construction/destruction
@@ -35,6 +39,15 @@ END_MESSAGE_MAP()
 CmapView::CmapView()
 {
 	// TODO: add construction code here
+	m_bMouseDrag = FALSE;
+	m_bMouseClick = FALSE;
+	m_reDrawFlag = TRUE;
+	m_ptDragStart.x = 0;
+	m_ptDragStart.y = 0;
+	m_ptDragOffset.x = 0;
+	m_ptDragOffset.y = 0;
+	scale = 1;
+
 	mypoint[0].longitude = 116.404682;//116.404682,39.919798
 	mypoint[0].latitude = 39.919798;
 	mypoint[1].longitude = 116.408491;//116.408491,39.920019
@@ -51,7 +64,7 @@ CmapView::CmapView()
 
 CmapView::~CmapView()
 {
-	
+	delete temppt;
 }
 
 BOOL CmapView::PreCreateWindow(CREATESTRUCT& cs)
@@ -74,12 +87,13 @@ void CmapView::OnDraw(CDC* pDC)
 	// TODO: add draw code for native data here
 	
 	std::vector<CPoint> mp;
+
 	extern double mymain(MYPOINT *mypoint, int NUM);
 	double maxdistance;
 	maxdistance = mymain(mypoint, POINTNUM);
 	CRect rect;
 	GetClientRect(&rect);
-
+	
 	double ratio = 2 * maxdistance / sqrt((rect.Height() * rect.Height() + rect.Width() * rect.Width()));
 	CPoint * p = new CPoint();
 	for (int i = 0; i < POINTNUM; i++)
@@ -89,12 +103,13 @@ void CmapView::OnDraw(CDC* pDC)
 		double minLongitude = mypoint[0].longitude;
 		double maxLatitude = mypoint[0].latitude;
 		minLonmaxLat(mypoint, POINTNUM, &minLongitude, &maxLatitude);
-		
-		p->x = (int)(distanceLongLat(minLongitude, mypoint[i].longitude, maxLatitude, maxLatitude) / ratio / 10) + 300;
-		p->y = (int)(distanceLongLat(minLongitude, minLongitude, maxLatitude, mypoint[i].latitude) / ratio / 10) + 50;
-		
+
+		p->x = (int)(distanceLongLat(minLongitude, mypoint[i].longitude, maxLatitude, maxLatitude) / ratio / 2);
+		p->y = (int)(distanceLongLat(minLongitude, minLongitude, maxLatitude, mypoint[i].latitude) / ratio / 2);
+
 		mp.push_back(*p);
 	}
+	delete p;
 
 	
 	//pDC->MoveTo(mp[0]);
@@ -102,22 +117,30 @@ void CmapView::OnDraw(CDC* pDC)
 	CPen pen;
 	pen.CreatePen(PS_SOLID, 5, RGB(0, 0, 0));
 	CPen* oldPen = pDC->SelectObject(&pen);
+
 	for (int i = 0; i < POINTNUM; i++)
 	{
-		
+
 		CString str;
 		str.Format(_T("%d"), i);
-		
-		pDC->TextOutW(mp[i].x, mp[i].y, str);
-		
 		//pDC->LineTo(mp[i]);
+		if (m_reDrawFlag)
+		{
+			temppt[i].x = mp[i].x;
+			temppt[i].y = mp[i].y;
+		}
+	
+		pt[i].x = temppt[i].x + m_ptDragOffset.x;
+		pt[i].y = temppt[i].y + m_ptDragOffset.y;
+		temppt[i].x = pt[i].x * scale;
+		temppt[i].y = pt[i].y * scale;
 		
-		pt[i].x = mp[i].x;
-		pt[i].y = mp[i].y;	
+		pDC->TextOutW(temppt[i].x, temppt[i].y, str);
 	}
-	pDC->Polyline(pt, 6);
+	
+	pDC->Polyline(temppt, 6);
 	pDC->SelectObject(oldPen);
-	delete p;
+	scale = 1;
 	delete pt;
 }
 
@@ -163,3 +186,62 @@ CmapDoc* CmapView::GetDocument() const // non-debug version is inline
 
 
 // CmapView message handlers
+
+
+void CmapView::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	
+	m_bMouseClick = TRUE;
+	m_ptDragStart.x = point.x;//保存鼠标第一次点击位置的坐标
+	m_ptDragStart.y = point.y;
+//	SetCapture();
+	CView::OnLButtonDown(nFlags, point);
+}
+
+
+void CmapView::OnLButtonUp(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	m_ptDragOffset.x = 0;
+	m_ptDragOffset.y = 0;
+	m_bMouseDrag = FALSE;
+	m_bMouseClick = FALSE;
+
+	CView::OnLButtonUp(nFlags, point);
+}
+
+
+void CmapView::OnMouseMove(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	m_bMouseDrag = TRUE;
+	if (m_bMouseDrag == TRUE && m_bMouseClick == TRUE)
+	{
+	
+		m_ptDragOffset.x = (point.x - m_ptDragStart.x) / 30;
+		m_ptDragOffset.y = (point.y - m_ptDragStart.y) / 30;
+		m_reDrawFlag = FALSE;
+		Invalidate();
+	}
+	
+	CView::OnMouseMove(nFlags, point);
+}
+
+
+BOOL CmapView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	// TODO: Add your message handler code here and/or call default
+
+	if (zDelta > 0)
+	{
+		scale = scale * 1.5;
+	}
+	if (zDelta < 0)
+	{
+		
+		scale = scale / 1.5;	
+	}
+	Invalidate();
+	return CView::OnMouseWheel(nFlags, zDelta, pt);
+}
