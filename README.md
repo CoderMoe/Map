@@ -1,6 +1,7 @@
 # Map
 C++电子地图
 相关理论参考于http://blog.csdn.net/liqiancao/article/details/50480229
+http://blog.csdn.net/u011627980/article/details/51518827
 
 以经度最小值和纬度最大值作为坐标原点(minLongitude,maxLatitude)
 求其他点到坐标原点的距离（实际地理空间距离），找出最大距离maxDistance
